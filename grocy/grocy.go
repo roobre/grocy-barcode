@@ -3,20 +3,19 @@ package grocy
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
-	"strings"
 
-	"roob.re/grocy-barcode/off"
+	"roob.re/grocy-barcode/provider"
 )
 
 type Client struct {
 	Server   string
 	APIKey   string
+	Provider provider.Provider
 	Defaults Defaults
 }
 
@@ -64,20 +63,16 @@ func (c Client) ConsumeOrCreate(barcode string) error {
 }
 
 func (c Client) Create(barcode string) (createdResponse, error) {
-	offProduct, err := off.Query(barcode)
+	product, err := c.Provider.Product(barcode)
 	if err != nil {
-		return createdResponse{}, fmt.Errorf("querying off: %w", err)
+		return createdResponse{}, fmt.Errorf("querying provider: %w", err)
 	}
 
-	if offProduct.Name == "" {
-		return createdResponse{}, errors.New("OFF returned an empty response")
-	}
-
-	log.Printf("Found product %s", offProduct)
+	log.Printf("Found product %s", product)
 
 	productCreatePayload := map[string]any{
-		"name":           offProduct.Name,
-		"description":    strings.Join(offProduct.Keywords, ", "),
+		"name":           product.Name,
+		"description":    product.Description,
 		"active":         1,
 		"location_id":    c.Defaults.ProductLocationID,
 		"qu_id_stock":    c.Defaults.ProductUnitID,
@@ -112,7 +107,7 @@ func (c Client) Create(barcode string) (createdResponse, error) {
 		return createdResponse{}, fmt.Errorf("unexpected status %d", response.StatusCode)
 	}
 
-	log.Printf("Created product %s and associated to %s", offProduct, barcode)
+	log.Printf("Created product %s and associated to %s", product, barcode)
 
 	return prodBarcodeResponse, nil
 }

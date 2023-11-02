@@ -6,6 +6,7 @@ import (
 
 	"roob.re/grocy-barcode/barcodehid"
 	"roob.re/grocy-barcode/grocy"
+	"roob.re/grocy-barcode/off"
 )
 
 func main() {
@@ -33,8 +34,9 @@ func main() {
 	bs := barcodehid.New(dev)
 
 	grocyClient := grocy.Client{
-		Server: grocyServer,
-		APIKey: grocyAPIKey,
+		Server:   grocyServer,
+		APIKey:   grocyAPIKey,
+		Provider: off.OpenFoodFacts{},
 		Defaults: grocy.Defaults{
 			ProductUnitID:     2,
 			ProductLocationID: 4,

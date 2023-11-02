@@ -4,21 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
+
+	"roob.re/grocy-barcode/provider"
 )
 
-type Product struct {
+type product struct {
 	Name     string   `json:"product_name"`
 	Keywords []string `json:"_keywords"`
 }
 
-func (p Product) String() string {
-	return fmt.Sprintf("%s (%v)", p.Name, p.Keywords)
-}
+type OpenFoodFacts struct{}
 
-func Query(barcode string) (Product, error) {
+func (OpenFoodFacts) Product(barcode string) (provider.Product, error) {
 	resp, err := http.Get(fmt.Sprintf("https://world.openfoodfacts.org/api/v0/product/%s.json", barcode))
 	if err != nil {
-		return Product{}, fmt.Errorf("making request to off: %w", err)
+		return provider.Product{}, fmt.Errorf("making request to off: %w", err)
 	}
 
 	defer func() {
@@ -26,17 +27,20 @@ func Query(barcode string) (Product, error) {
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return Product{}, fmt.Errorf("unexpected status code %d", resp.StatusCode)
+		return provider.Product{}, fmt.Errorf("unexpected status code %d", resp.StatusCode)
 	}
 
 	var out struct {
-		Product Product `json:"product"`
+		Product product `json:"product"`
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&out)
 	if err != nil {
-		return Product{}, fmt.Errorf("reading product json: %w", err)
+		return provider.Product{}, fmt.Errorf("reading product json: %w", err)
 	}
 
-	return out.Product, nil
+	return provider.Product{
+		Name:        out.Product.Name,
+		Description: strings.Join(out.Product.Keywords, ", "),
+	}, nil
 }

@@ -7,7 +7,8 @@ import (
 )
 
 func TestQuery(t *testing.T) {
-	product, err := off.Query("8411525020169")
+	off := off.OpenFoodFacts{}
+	product, err := off.Product("8411525020169")
 	if err != nil {
 		t.Fatalf("querying product: %v", err)
 	}
