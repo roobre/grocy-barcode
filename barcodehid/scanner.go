@@ -8,9 +8,16 @@ import (
 )
 
 const (
-	kcEnter   = 0x28
-	kcOne     = 0x1e
-	asciiZero = 48
+	// Ref: https://gist.github.com/ekaitz-zarraga/2b25b94b711684ba4e969e5a5723969b
+	kcA       = 0x04
+	kcZ       = 0x1d
+	asciiZero = byte('0')
+
+	kcOne  = 0x1e
+	kcZero = 0x27
+	asciiA = byte('a')
+
+	kcEnter = 0x28
 )
 
 type Scanner struct {
@@ -36,15 +43,15 @@ func (s Scanner) Read() (string, error) {
 			continue
 		}
 
-		if kc < kcOne || kc > kcEnter {
-			// Keycode is not a number keycode.
-			continue
+		switch {
+		case kc >= kcA && kc <= kcZ:
+			code += string(kc - kcA + asciiA)
+		case kc >= kcOne && kc <= kcZero:
+			// Keycodes for 1..9 start at kcOne, continue up to 9, and then jump back to zero.
+			// To get the number, we subtract the first keycode (kcOne), and add 1 to make it 1. We then take the modulus so
+			// the last keycode, 10, becomes zero. Finally, we add the ascii value for '0'.
+			code += string((kc-kcOne+1)%10 + asciiZero)
 		}
-
-		// Keycodes for 1..9 start at kcOne, continue up to 9, and then jump back to zero.
-		// To get the number, we subtract the first keycode (kcOne), and add 1 to make it 1. We then take the modulus so
-		// the last keycode, 10, becomes zero. Finally, we add the ascii value for '0'.
-		code += string((kc-kcOne+1)%10 + asciiZero)
 	}
 
 	return code, nil
