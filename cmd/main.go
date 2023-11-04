@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	grocybarcode "roob.re/grocy-barcode"
 	"roob.re/grocy-barcode/barcodehid"
 	"roob.re/grocy-barcode/barcodetext"
 	"roob.re/grocy-barcode/grocy"
@@ -27,7 +28,7 @@ func main() {
 		log.Fatal("GB_GROCY_API_KEY must be set to a grocy API key")
 	}
 
-	var br barcodeReader
+	var br grocybarcode.BarcodeReader
 	if hid != "" {
 		log.Printf("Opening HID barcode reader at %s", hid)
 		dev, err := os.Open(hid)
@@ -57,23 +58,16 @@ func main() {
 			ProductLocationID: 4,
 		},
 	}
+
 	log.Printf("Created grocy client for %s", grocyServer)
 
-	for {
-		log.Printf("Ready to read barcode")
-		barcode, err := br.Read()
-		if err != nil {
-			log.Printf("error reading barcode: %v", err)
-			return
-		}
-
-		err = grocyClient.AddOrCreate(barcode)
-		if err != nil {
-			log.Printf("error adding or creating %s: %v", barcode, err)
-		}
+	gb := grocybarcode.GrocyBarcode{
+		Grocy:  grocyClient,
+		Reader: br,
 	}
-}
 
-type barcodeReader interface {
-	Read() (string, error)
+	err := gb.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
