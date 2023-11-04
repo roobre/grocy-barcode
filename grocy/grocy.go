@@ -31,7 +31,7 @@ type createdResponse struct {
 func (c Client) AddOrCreate(barcode string) error {
 	log.Printf("Adding or creating %s", barcode)
 
-	response, err := c.Get("/stock/products/by-barcode/"+barcode, nil)
+	response, err := c.get("/stock/products/by-barcode/"+barcode, nil)
 	if err != nil {
 		return fmt.Errorf("checking for existence of product: %w", err)
 	}
@@ -58,10 +58,6 @@ func (c Client) AddOrCreate(barcode string) error {
 	return nil
 }
 
-func (c Client) ConsumeOrCreate(barcode string) error {
-	return nil
-}
-
 func (c Client) Create(barcode string) (createdResponse, error) {
 	product, err := c.Provider.Product(barcode)
 	if err != nil {
@@ -82,7 +78,7 @@ func (c Client) Create(barcode string) (createdResponse, error) {
 		"qu_id_price":              c.Defaults.ProductUnitID,
 	}
 	productResponse := createdResponse{}
-	response, err := c.Post("/objects/products", productCreatePayload, &productResponse)
+	response, err := c.post("/objects/products", productCreatePayload, &productResponse)
 	if err != nil {
 		return createdResponse{}, fmt.Errorf("creating product: %w", err)
 	}
@@ -98,7 +94,7 @@ func (c Client) Create(barcode string) (createdResponse, error) {
 	}
 
 	prodBarcodeResponse := createdResponse{}
-	response, err = c.Post("/objects/product_barcodes", prodBarcodeRequest, prodBarcodeResponse)
+	response, err = c.post("/objects/product_barcodes", prodBarcodeRequest, prodBarcodeResponse)
 	if err != nil {
 		return createdResponse{}, fmt.Errorf("creating product_barcode: %w", err)
 	}
@@ -114,10 +110,25 @@ func (c Client) Create(barcode string) (createdResponse, error) {
 }
 
 func (c Client) Add(barcode string) error {
-	addRequest := map[string]any{
+	return c.byBarcode("add", barcode)
+}
+
+func (c Client) Consume(barcode string) error {
+	log.Printf("Consuming one unit of %s", barcode)
+	return c.byBarcode("consume", barcode)
+}
+
+func (c Client) Open(barcode string) error {
+	log.Printf("Opening one unit of %s", barcode)
+	return c.byBarcode("open", barcode)
+}
+
+func (c Client) byBarcode(action, barcode string) error {
+	request := map[string]any{
 		"amount": 1,
 	}
-	response, err := c.Post(fmt.Sprintf("/stock/products/by-barcode/%s/add", barcode), addRequest, nil)
+
+	response, err := c.post(fmt.Sprintf("/stock/products/by-barcode/%s/%s", barcode, action), request, nil)
 	if err != nil {
 		return fmt.Errorf("adding product: %w", err)
 	}
@@ -129,8 +140,8 @@ func (c Client) Add(barcode string) error {
 	return nil
 }
 
-func (c Client) Get(path string, dest any) (*http.Response, error) {
-	resp, err := c.Do(http.MethodGet, path, nil)
+func (c Client) get(path string, dest any) (*http.Response, error) {
+	resp, err := c.do(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("performing request to %q: %w", path, err)
 	}
@@ -152,14 +163,14 @@ func (c Client) Get(path string, dest any) (*http.Response, error) {
 	return resp, nil
 }
 
-func (c Client) Post(path string, data any, dest any) (*http.Response, error) {
+func (c Client) post(path string, data any, dest any) (*http.Response, error) {
 	buf := &bytes.Buffer{}
 	err := json.NewEncoder(buf).Encode(data)
 	if err != nil {
 		return nil, fmt.Errorf("json-encoding data: %w", err)
 	}
 
-	resp, err := c.Do(http.MethodPost, path, buf)
+	resp, err := c.do(http.MethodPost, path, buf)
 	if err != nil {
 		return nil, fmt.Errorf("performing request to %q: %w", path, err)
 	}
@@ -181,7 +192,7 @@ func (c Client) Post(path string, data any, dest any) (*http.Response, error) {
 	return resp, nil
 }
 
-func (c Client) Do(method, path string, body io.Reader) (*http.Response, error) {
+func (c Client) do(method, path string, body io.Reader) (*http.Response, error) {
 	u, err := url.JoinPath(c.Server, "api", path)
 	if err != nil {
 		return nil, fmt.Errorf("building url: %w", err)
