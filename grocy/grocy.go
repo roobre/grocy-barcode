@@ -71,14 +71,15 @@ func (c Client) Create(barcode string) (createdResponse, error) {
 	log.Printf("Found product %s", product)
 
 	productCreatePayload := map[string]any{
-		"name":           product.Name,
-		"description":    product.Description,
-		"active":         1,
-		"location_id":    c.Defaults.ProductLocationID,
-		"qu_id_stock":    c.Defaults.ProductUnitID,
-		"qu_id_purchase": c.Defaults.ProductUnitID,
-		"qu_id_consume":  c.Defaults.ProductUnitID,
-		"qu_id_price":    c.Defaults.ProductUnitID,
+		"name":                     product.Name,
+		"description":              product.Description,
+		"active":                   1,
+		"default_best_before_days": -1,
+		"location_id":              c.Defaults.ProductLocationID,
+		"qu_id_stock":              c.Defaults.ProductUnitID,
+		"qu_id_purchase":           c.Defaults.ProductUnitID,
+		"qu_id_consume":            c.Defaults.ProductUnitID,
+		"qu_id_price":              c.Defaults.ProductUnitID,
 	}
 	productResponse := createdResponse{}
 	response, err := c.Post("/objects/products", productCreatePayload, &productResponse)
